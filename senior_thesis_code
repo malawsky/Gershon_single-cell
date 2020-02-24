@@ -83,7 +83,7 @@ total <- data.frame(C1qb,Col3a1,Meg3,Sox10,Aqp4,Pecam1,Rsph1,Mog)
 total$ident <- 'none'
   
 
-for (i in 1:14632) {
+for (i in 1:length(all)) {
   if(total[i,1]) {
     total[i,9] <- "C1qb"
   }
@@ -238,7 +238,7 @@ total <- data.frame(C1qb,Col3a1,Meg3,Sox10,Aqp4,Pecam1,Rsph1,Mog)
 total$ident <- 'none'
   
 
-for (i in 1:14632) {
+for (i in 1:length(all)) {
   if(total[i,1]) {
     total[i,9] <- "C1qb"
   }
