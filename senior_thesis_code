@@ -275,10 +275,10 @@ dev.off()
 #figure 4b and 4c
 
 merged1 <- FindNeighbors(merged1, dims = 1:20, verbose = FALSE,reduction = "harmony")
-merged1 <- FindClusters(merged1, resolution = .5 )
+merged1 <- FindClusters(merged1, resolution = 1.5 )
 
 Idents(merged1) <- 'seurat_clusters'
-c12 <- subset(x = merged, idents  = 10)
+c12 <- subset(x = merged, idents  = 15)
 c12 <- SCTransform(c12, vars.to.regress = c("percent.mt","nFeature_RNA","nCount_RNA") , verbose = T)
 c12 <- RunHarmony(c12, "harmony_stat", plot_convergence = F,assay.use="SCT")
 c12 <- RunUMAP(c12, dims = 1:50, verbose = FALSE, seed.use = 42, reduction = "harmony")
@@ -286,8 +286,8 @@ c12 <- FindNeighbors(c12, dims = 1:50, verbose = FALSE)
 c12 <- FindClusters(c12, resolution = .3)
 
 pdf("figure_4b_and_4c.pdf")
-DimPlot(c12, group.by=c("seurat_clusters"),pt.size = 1)
-DimPlot(c12, group.by=c("tumor.model"),pt.size = 1)
+DimPlot(c12, group.by=c("seurat_clusters"),pt.size = 3)
+DimPlot(c12, group.by=c("tumor.model"),pt.size = 3)
 dev.off()
 
 #figure 4d
@@ -319,4 +319,50 @@ ggbarplot(df, x = "cluster", y = "percent",
           color = "model", palette = c("#00AFBB", "#E7B800", "red"),
           position = position_dodge(0.8)) + stat_compare_means(aes(group = model), label = "p.signif")
 dev.off()
+
+# figure 4e and 4f
+
+c12 <- subset(x = merged1, idents  = 21)
+c12 <- SCTransform(c12, vars.to.regress = c("percent.mt","nFeature_RNA","nCount_RNA") , verbose = T)
+c12 <- RunHarmony(c12, "harmony_stat", plot_convergence = F,assay.use="SCT")
+c12 <- RunUMAP(c12, dims = 1:50, verbose = FALSE, seed.use = 42, reduction = "harmony")
+c12 <- FindNeighbors(c12, dims = 1:50, verbose = FALSE)
+c12 <- FindClusters(c12, resolution = .4)
+
+pdf("figure_4e_and_4f.pdf")
+DimPlot(c12, group.by=c("seurat_clusters"),pt.size = 1)
+DimPlot(c12, group.by=c("tumor.model"),pt.size = 1)
+dev.off()
+
+# figure 4g
+
+y <- 2
+q<- 0:(y-1)
+percent_node <- matrix(0, nrow = y, ncol = 16)
+Idents(c12) <- "seurat_clusters"
+Idents(merged1) <- "harmony_stat"
+levels(c12)
+for (i in 1:y) {
+  for(j in 1:16){
+percent_node[i,j] <- length(grep(mice[[j]], WhichCells(c12, idents = (i-1)), value=T))  / length(grep(mice[[j]], WhichCells(merged1, idents = c("tumor", "WT"), value=T)))
+  }
+}
+
+percent <- as.vector(percent_node)*100
+cluster <- rep(0:(y-1),16)
+model <- c(rep("MSMO",5*y), rep("GSMO",6*y), rep("WT",5*y))
+
+df <- data.frame(percent,cluster,model)
+head(df)
+
+df$model <- as.factor(df$model)
+df$cluster <- as.factor(df$cluster)
+
+pdf("figure_4g.pdf")
+ggbarplot(df, x = "cluster", y = "percent", 
+          add = c("mean_se", "jitter"),
+          color = "model", palette = c("#00AFBB", "#E7B800", "red"),
+          position = position_dodge(0.8)) + stat_compare_means(aes(group = model), label = "p.signif")
+dev.off()
+
 ```
