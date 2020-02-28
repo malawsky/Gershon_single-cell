@@ -218,8 +218,6 @@ merged1 <- SCTransform(merged1, vars.to.regress = c("percent.mt","nFeature_RNA",
 merged1 <- RunPCA(merged1, verbose = FALSE, seed.use = 42)
 merged1 <- RunHarmony(merged1, "harmony_stat", plot_convergence = F)
 merged1 <- RunUMAP(merged1, dims = 1:50, verbose = FALSE, seed.use = 42,   reduction = "harmony")
-merged1 <- FindNeighbors(merged1, dims = 1:50, verbose = FALSE,reduction = "harmony")
-merged1 <- FindClusters(merged1, resolution = .4)
 
 # figure 4a
 
@@ -274,8 +272,8 @@ dev.off()
 
 #figure 4b and 4c
 
-merged1 <- FindNeighbors(merged1, dims = 1:20, verbose = FALSE,reduction = "harmony")
-merged1 <- FindClusters(merged1, resolution = 1.5 )
+merged1 <- FindNeighbors(merged1, dims = 1:20, verbose = FALSE)
+merged1 <- FindClusters(merged1, resolution = 1.5)
 
 Idents(merged1) <- 'seurat_clusters'
 c12 <- subset(x = merged, idents  = 15)
