@@ -25,7 +25,7 @@ MSMO <- readRDS(pathname to MSMO Seurat object)
 test <- GetAssayData(object = GSMO, slot = 'data')
 remove <- c("CRE-RECOMBINASE","Prm1")
 test <- test[!rownames(test) %in% remove, ]
-
+test <- downsampleMatrix(test, .6, bycol=TRUE)
 GSMO <- CreateSeuratObject(test, project = "SeuratProject", assay = "RNA",
   min.cells = 0, min.features = 0, names.field = 1,
   names.delim = "_", meta.data = NULL)
