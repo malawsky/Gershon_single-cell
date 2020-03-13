@@ -26,8 +26,6 @@ test <- GetAssayData(object = GSMO, slot = 'data')
 remove <- c("CRE-RECOMBINASE","Prm1")
 test <- test[!rownames(test) %in% remove, ]
 
-test <- downsampleMatrix(test, .6, bycol=TRUE)
-
 GSMO <- CreateSeuratObject(test, project = "SeuratProject", assay = "RNA",
   min.cells = 0, min.features = 0, names.field = 1,
   names.delim = "_", meta.data = NULL)
@@ -52,7 +50,7 @@ max.UMI <- 4*sd(merged@meta.data$nCount_RNA) + median(merged@meta.data$nCount_RN
 max.Gene <- 4*sd(merged@meta.data$nFeature_RNA) + median(merged@meta.data$nFeature_RNA)
 max.mito <- sd(merged@meta.data$percent.mt)*4 + median(merged@meta.data$percent.mt)
 
-merged <- subset(merged, subset =  nCount_RNA > 500 & nCount_RNA < max.UMI & nFeature_RNA > 200 & nFeature_RNA < max.Gene & percent.mt < max.mito)
+merged <- subset(merged, subset =  nCount_RNA > 500 & nCount_RNA < max.UMI & nFeature_RNA > 200 & nFeature_RNA < max.Gene & percent.mt < 10)
 
 #normalize data, calculate PCs, UMAP, and louvain clustering
 merged <- SCTransform(merged, vars.to.regress = c("percent.mt","nFeature_RNA","nCount_RNA") , verbose = T)
