@@ -25,24 +25,21 @@ set.seed(100)
 
 GSMO <- readRDS('GSMO Seurat object')
 MSMO <- readRDS('MSMO Seurat object')
+
+#get rid of unwanted confounding genes and add metadata
 test <- GetAssayData(object = GSMO, slot = 'data')
 remove <- c("CRE-RECOMBINASE","Prm1")
 test <- test[!rownames(test) %in% remove, ]
-
 test <- downsampleMatrix(test, .6, bycol=TRUE)
-
 GSMO <- CreateSeuratObject(test, project = "SeuratProject", assay = "RNA",
   min.cells = 0, min.features = 0, names.field = 1,
   names.delim = "_", meta.data = NULL)
-
 test1 <- GetAssayData(object = MSMO, slot = 'data')
 remove <- c("CRE-RECOMBINASE","Prm1")
 test1 <- test1[!rownames(test1) %in% remove, ]
-
 MSMO <- CreateSeuratObject(test1, project = "SeuratProject", assay = "RNA",
   min.cells = 0, min.features = 0, names.field = 1,
   names.delim = "_", meta.data = NULL)
-
 GSMO[["percent.mt"]] <- PercentageFeatureSet(GSMO, pattern = "^mt-")
 GSMO[["tumor.model"]] <- "GSMO"
 MSMO[["percent.mt"]] <- PercentageFeatureSet(MSMO, pattern = "^mt-")
@@ -50,16 +47,13 @@ MSMO[["tumor.model"]] <- "MSMO"
 
 #filter merged object based on QC criteria
 merged <- merge(x = MSMO, y = GSMO,  merge.data = TRUE)
-
 max.UMI <- 4*sd(merged@meta.data$nCount_RNA) + median(merged@meta.data$nCount_RNA)
 max.Gene <- 4*sd(merged@meta.data$nFeature_RNA) + median(merged@meta.data$nFeature_RNA)
 max.mito <- sd(merged@meta.data$percent.mt)*4 + median(merged@meta.data$percent.mt)
-
 merged <- subset(merged, subset =  nCount_RNA > 500 & nCount_RNA < max.UMI & nFeature_RNA > 200 & nFeature_RNA < max.Gene & percent.mt < max.mito)
 
 #normalize data, calculate PCs, UMAP, and louvain clustering
 merged <- SCTransform(merged, vars.to.regress = c("percent.mt","nFeature_RNA","nCount_RNA") , verbose = T)
-
 merged <- RunPCA(merged, verbose = T, seed.use = 42)
 merged <- RunUMAP(merged, dims = 1:16, verbose = FALSE, seed.use = 42)
 merged <- FindNeighbors(merged, dims = 1:16, verbose = FALSE)
@@ -214,10 +208,8 @@ FeaturePlot(merged, features = c(  "Barhl1", "Ascl1"), split.by = "tumor.model",
 FeaturePlot(merged, features = c( "Pax3","Pax2"), split.by = "tumor.model", order=T)
 dev.off()
 
-#read in normal P7 cerebellum seurat object from Ocasio et al.
-
-WT <- readRDS('pathname to WT Seurat object')
-
+#read in normal P7 cerebellum seurat object from Ocasio et al. and add metadata
+WT <- readRDS('WT Seurat object from Ocasio et al.')
 WT[["percent.mt"]] <- PercentageFeatureSet(WT, pattern = "^mt-")
 WT[["harmony_stat"]] <- "wildtype"
 merged[["harmony_stat"]] <- "tumor"
@@ -228,7 +220,7 @@ merged1 <- SCTransform(merged1, vars.to.regress = c("percent.mt","nFeature_RNA",
 merged1 <- RunPCA(merged1, verbose = FALSE, seed.use = 42)
 merged1 <- RunHarmony(merged1, "harmony_stat", plot_convergence = F)
 merged1 <- RunUMAP(merged1, dims = 1:50, verbose = FALSE, seed.use = 42,   reduction = "harmony")
-merged1 <- FindNeighbors(merged1, dims = 1:50, verbose = FALSE,reduction = "harmony")
+merged1 <- FindNeighbors(merged1, dims = 1:50, verbose = FALSE)
 merged1 <- FindClusters(merged1, resolution = 1.5)
 
 # figure 5a
@@ -242,11 +234,8 @@ Aqp4 <- all %in% WhichCells(object = merged1, expression = Aqp4 > 1.5)
 Pecam1 <- all %in% WhichCells(object = merged1, expression = Pecam1 > 0.75)
 Rsph1 <- all %in% WhichCells(object = merged1, expression = Rsph1 > 1)
 Mog <- all %in% WhichCells(object = merged1, expression = Mog > 1)
-
-
 total <- data.frame(C1qb,Col3a1,Meg3,Sox10,Aqp4,Pecam1,Rsph1,Mog)
 total$ident <- 'zzz'
-  
 
 for (i in 1:14632) {
   if(total[i,1]) {
@@ -283,6 +272,7 @@ dev.off()
 
 # figure 5b-g
 
+#subset Pecam1+ cluster and run same steps as before
 c12 <- subset(x = merged1, idents  = 21)
 c12 <- SCTransform(c12, vars.to.regress = c("percent.mt","nFeature_RNA","nCount_RNA") , verbose = T)
 c12 <- RunHarmony(c12, "harmony_stat", plot_convergence = F,assay.use="SCT")
@@ -307,8 +297,6 @@ cluster <- rep(0:(y-1),16)
 model <- c(rep("MSMO",5*y), rep("GSMO",6*y), rep("WT",5*y))
 
 df <- data.frame(percent,cluster,model)
-head(df)
-
 df$model <- as.factor(df$model)
 df$cluster <- as.factor(df$cluster)
 
@@ -369,7 +357,6 @@ for (i in 1:length(all)) {
 
 c12[["cluster_1"]] <- total11[,4]
 
-
 pdf("figure_5b-g.pdf")
 DimPlot(c12, group.by=c("seurat_clusters"), cols = colors.use ,pt.size = 3)
 DimPlot(c12, group.by=c("tumor.model"),pt.size = 3)
@@ -383,7 +370,7 @@ DimPlot(c12, group.by=c("cluster_1"), cols = c("#00AFBB", "#E7B800", "red","ligh
 dev.off()
 
 # figure 6a-h
-
+#subset C1qb+ cluster and run same steps as before
 c12 <- subset(x = merged1, idents  = 15)
 c12 <- SCTransform(c12, vars.to.regress = c("percent.mt","nFeature_RNA","nCount_RNA") , verbose = T)
 c12 <- RunHarmony(c12, "harmony_stat", plot_convergence = F,assay.use="SCT")
@@ -422,7 +409,6 @@ total22 <- data.frame(C1qb)
 total22$ident <- 'zzz'
 
 for (i in 1:length(all)) {
-
         if(total22[i,1]) {
     total22[i,2] <- "C1qb"
         }
@@ -556,7 +542,7 @@ DimPlot(c12, group.by=c("cluster_3"), cols = c("#00AFBB", "#E7B800","lightgrey")
 dev.off()
 
 # figure 7a-g
-
+#subset Col3a1+ cluster and run same steps as before
 c12 <- subset(x = merged1, idents  = 17)
 c12 <- SCTransform(c12, vars.to.regress = c("percent.mt","nFeature_RNA","nCount_RNA") , verbose = T)
 c12 <- RunHarmony(c12, "harmony_stat", plot_convergence = F,assay.use="SCT")
