@@ -1,4 +1,6 @@
-#Malawsky et al. data analysis
+title: "Computational Analysis for Malawsky et al."
+author: "Daniel Malawsky"
+date: "04/05/2020"
 
 ```{r}
 library(Seurat)
