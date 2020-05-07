@@ -258,9 +258,6 @@ merged1 <- RunUMAP(merged1, dims = 1:50, verbose = FALSE, seed.use = 42, reducti
 merged1 <- FindNeighbors(merged1, dims = 1:50, verbose = FALSE,reduction = "harmony")
 merged1 <- FindClusters(merged1, resolution = 1.5)
 
-#saveRDS(merged1, "/proj/gershont/projects/GSMO_MSMO_WT_seed05062020_harmony.rds")
-merged1 <- readRDS( "/proj/gershont/projects/GSMO_MSMO_WT_seed05062020_harmony.rds")
-
 #differential expression
 Idents(merged1) <- "seurat_clusters"
 clust0 <- FindMarkers(merged1,ident.1 = 0,  logfc.threshold = .25)
