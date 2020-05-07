@@ -378,7 +378,9 @@ total$ident <- 'zzz'
 merged1[["stromal"]] <- total[,9]
 
 pdf("figure_5a_seed.pdf")
-DimPlot(merged1, group.by=c("stromal"), order = c("Meg3","Sox10","C1qb","Aqp4","Col3a1","Pecam1","Rsph1","Mog",'zzz'), cols = rev(c(colors.use[14:19],colors.use[21:22],"lightgrey")) ,pt.size = 1)
+DimPlot(merged1, group.by=c("stromal"), order = c("Meg3","Sox10","C1qb","Aqp4","Col3a1"
+,"Pecam1","Rsph1","Mog",'zzz'), cols = rev(c(colors.use[14:19],colors.use[21:22],"lightgrey"))
+,pt.size = 1)
 dev.off()
 
 # figure 5b-g
@@ -404,13 +406,15 @@ write.xlsx(out, file = paste0('GM_WT_endo_',i,'_markers.xlsx'))
 y <- 2
 q<- 0:(y-1)
 percent_node <- matrix(0, nrow = y, ncol = 16)
-mice <- c("M6","M7", "M8","M9", "M11","G6","G7","G8","G9","G10","G11","WT01" ,"WT02" ,"WT03" ,"WT04" ,"WT05")
+mice <- c("M6","M7", "M8","M9", "M11","G6","G7","G8","G9","G10","G11",
+"WT01" ,"WT02" ,"WT03" ,"WT04" ,"WT05")
 Idents(c12) <- "seurat_clusters"
 Idents(merged1) <- "seurat_clusters"
 levels(c12)
 for (i in 1:y) {
   for(j in 1:16){
-percent_node[i,j] <- length(grep(mice[[j]], WhichCells(c12, idents = (i-1)), value=T))  / length(grep(mice[[j]], WhichCells(merged1, idents = 0:26, value=T)))
+percent_node[i,j] <- length(grep(mice[[j]], WhichCells(c12, idents = (i-1)), value=T))
+/ length(grep(mice[[j]], WhichCells(merged1, idents = 0:26, value=T)))
   }
 }
 
@@ -519,7 +523,8 @@ Idents(merged1) <- "seurat_clusters"
 levels(c12)
 for (i in 1:y) {
   for(j in 1:16){
-percent_node[i,j] <- length(grep(mice[[j]], WhichCells(c12, idents = (i-1)), value=T))  / length(grep(mice[[j]], WhichCells(merged1, idents = 0:26, value=T)))
+percent_node[i,j] <- length(grep(mice[[j]], WhichCells(c12, idents = (i-1)), value=T))
+/ length(grep(mice[[j]], WhichCells(merged1, idents = 0:26, value=T)))
   }
 }
 
