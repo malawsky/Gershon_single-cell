@@ -1,7 +1,7 @@
 title: "Computational Analysis for Malawsky et al."
 author: "Daniel Malawsky"
 date: "04/06/2020"
-version: R 3.5.0
+version: "R 3.5.0"
 
 ```{r}
 
