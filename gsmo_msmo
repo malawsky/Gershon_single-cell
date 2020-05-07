@@ -1,6 +1,6 @@
 title: "Computational Analysis for Malawsky et al."
 author: "Daniel Malawsky"
-date: "04/05/2020"
+date: "04/06/2020"
 
 ```{r}
 library(Seurat)
@@ -19,17 +19,19 @@ library(harmony)
 library(colorspace)
 library(SeuratWrappers)
 library(DropletUtils)
-colors.use <- c(brewer.pal(8, 'Set1'), brewer.pal(7, 'Dark2'),  'blue4', 'orangered', 'orangered4',"firebrick","pink")
-theme_set(theme_pubclean())
-set.seed(100)
+
+colors.use <- c(brewer.pal(8, 'Set1'), brewer.pal(7, 'Dark2'),  'blue4', 'orangered', 'orangered4',"firebrick","black","green","purple","pink")
+
+set.seed(05062020)
 
 #read in Gsmo and Msmo seurat objects
 
-GSMO <- readRDS('GSMO Seurat object')
-MSMO <- readRDS('MSMO Seurat object')
-
-#get rid of unwanted confounding genes and add metadata
+GSMO <- readRDS('pathname to GSMO Seurat object')
+MSMO <- readRDS('pathname to MSMO Seurat object')
 test <- GetAssayData(object = GSMO, slot = 'data')
+
+#remove unwanted transcript
+
 remove <- c("CRE-RECOMBINASE","Prm1")
 test <- test[!rownames(test) %in% remove, ]
 test <- downsampleMatrix(test, .6, bycol=TRUE)
@@ -48,41 +50,54 @@ MSMO[["percent.mt"]] <- PercentageFeatureSet(MSMO, pattern = "^mt-")
 MSMO[["tumor.model"]] <- "MSMO"
 
 #filter merged object based on QC criteria
+
 merged <- merge(x = MSMO, y = GSMO,  merge.data = TRUE)
 max.UMI <- 4*sd(merged@meta.data$nCount_RNA) + median(merged@meta.data$nCount_RNA)
 max.Gene <- 4*sd(merged@meta.data$nFeature_RNA) + median(merged@meta.data$nFeature_RNA)
-max.mito <- sd(merged@meta.data$percent.mt)*4 + median(merged@meta.data$percent.mt)
-merged <- subset(merged, subset =  nCount_RNA > 500 & nCount_RNA < max.UMI & nFeature_RNA > 200 & nFeature_RNA < max.Gene & percent.mt < max.mito)
+merged <- subset(merged, subset =  nCount_RNA > 500 & nCount_RNA < max.UMI & nFeature_RNA > 200 & nFeature_RNA < max.Gene & percent.mt < 10)
 
 #normalize data, calculate PCs, UMAP, and louvain clustering
 merged <- SCTransform(merged, vars.to.regress = c("percent.mt","nFeature_RNA","nCount_RNA") , verbose = T)
 merged <- RunPCA(merged, verbose = T, seed.use = 42)
-merged <- RunUMAP(merged, dims = 1:16, verbose = FALSE, seed.use = 42)
-merged <- FindNeighbors(merged, dims = 1:16, verbose = FALSE)
-merged <- FindClusters(merged, resolution = 1)
+merged <- RunUMAP(merged, dims = 1:17, verbose = FALSE, seed.use = 42)
+merged <- FindNeighbors(merged, dims = 1:17, verbose = FALSE)
+merged <- FindClusters(merged, resolution = 1.2)
+
+#percent variation explained by 17 PCs
+string <- Stdev(merged, reduction = "pca")
+eig <- (string^2)
+sum(eig[1:17]) / sum(eig)
+
+#differential expression
+Idents(merged) <- "seurat_clusters"
+for (i in 0:21) {
+clust0 <- FindMarkers(merged,ident.1 = i,  logfc.threshold = .10)
+clust0$ratio <- clust0[,3]/(clust0[,4]+.0000001)
+out <- clust0[order(-clust0[,6]), ]
+write.xlsx(out, file = paste0('GM_SEED_cluster_',i,'_markers.xlsx'))
+}
 
 #figure 2a
-pdf("figure_2a.pdf")
-DimPlot(merged, group.by=c("seurat_clusters"), cols = colors.use)
+pdf("figure_2a_seed.pdf")
+DimPlot(merged, group.by=c("seurat_clusters"), cols = colors.use,pt.size = 1)
 dev.off()
 
 #figure 2b
 all <- WhichCells(object = merged, expression = Olig2 > -1)
 C1qb <- all %in% WhichCells(object = merged, expression = C1qb > 1)
 Col3a1 <- all %in% WhichCells(object = merged, expression = Col3a1 > 1)
-Rbfox3 <- all %in% WhichCells(object = merged, expression = Rbfox3 > 1)
+Meg3 <- all %in% WhichCells(object = merged, expression = Meg3 > 1.5)
+Rbfox3 <- all %in% WhichCells(object = merged, expression = Rbfox3 > 1.25)
 Sox10 <- all %in% WhichCells(object = merged, expression = Sox10 > 0.5)
 Aqp4 <- all %in% WhichCells(object = merged, expression = Aqp4 > 1.5)
 Pecam1 <- all %in% WhichCells(object = merged, expression = Pecam1 > 0.75)
 Rsph1 <- all %in% WhichCells(object = merged, expression = Rsph1 > 1)
 Mog <- all %in% WhichCells(object = merged, expression = Mog > 1)
 
-
 total <- data.frame(C1qb,Col3a1,Meg3,Sox10,Aqp4,Pecam1,Rsph1,Mog)
 total$ident <- 'zzz'
   
-
-for (i in 1:14632) {
+for (i in 1:14633) {
   if(total[i,1]) {
     total[i,9] <- "C1qb"
   }
@@ -111,24 +126,23 @@ for (i in 1:14632) {
 
 merged[["stromal"]] <- total[,9]
 
-pdf("figure_2b.pdf")
-DimPlot(merged, group.by=c("stromal"), cols = c(colors.use[16],colors.use[14],colors.use[17],colors.use[13],"pink",colors.use[18],"firebrick",colors.use[15],"lightgrey"), pt.size = 1
-)
+pdf("figure_2b_seed.pdf")
+DimPlot(merged, group.by=c("stromal"), order = c("Meg3","Sox10","C1qb","Aqp4","Col3a1","Pecam1","Rsph1","Mog",'zzz'), cols = rev(c(colors.use[14:19],colors.use[21:22],"lightgrey")),pt.size = 1)
 dev.off()
 
 #figure 2c
 
 Mki67 <- all %in% WhichCells(object = merged, expression = Mki67 > 1)
-Gli1 <- all %in% WhichCells(object = merged, expression = Gli1 > 0)  
+Gli1 <- all %in% WhichCells(object = merged, expression = Gli1 > .6)  
 Barhl1 <- all %in% WhichCells(object = merged, expression = Barhl1 > 1)  
-Cntn2 <- all %in% WhichCells(object = merged, expression = Cntn2 > 1)
-Rbfox3 <- all %in% WhichCells(object = merged, expression = Rbfox3 > 1) 
+Cntn2 <- all %in% WhichCells(object = merged, expression = Cntn2 > 1.25)
+Rbfox3 <- all %in% WhichCells(object = merged, expression = Rbfox3 > 1.25) 
 Grin2b <- all %in% WhichCells(object = merged, expression = Grin2b > 0)
 
 total <- data.frame(Mki67,Gli1,Barhl1,Cntn2,Rbfox3,Grin2b)
 total$ident <- 'zzz'
   
-for (i in 1:14632) {
+for (i in 1:14633) {
   if(total[i,5]) {
     total[i,7] <- "Rbfox3"
   }
@@ -154,43 +168,45 @@ merged[["gene_set"]] <- total[,7]
 
 Idents(merged) <- "gene_set"
 
-pdf("figure_2c.pdf")
-DimPlot(merged, group.by=c("gene_set"), cols = c('skyblue2',"yellowgreen","red","tan1",brewer.pal(10,'Paired')[c(9)],"tomato1","lightgrey"), plot.order = c( "zzz","Rbfox3","Barhl1","Mki67","Grin2b","Cntn2","Gli1"), 
-pt.size = 1
-)
+
+pdf("figure_2c_seed.pdf")
+DimPlot(merged, group.by=c("gene_set"), cols = c("lightgrey","tomato1","skyblue2","red",brewer.pal(10,'Paired')[c(9)],"tan1","yellowgreen"), order = rev(c("zzz","Rbfox3","Barhl1","Gli1","Mki67","Grin2b","Cntn2")), 
+pt.size = 1)
 dev.off()
+
 
 #figure 2d
 
-pdf("figure_2d.pdf")
-DimPlot(merged, group.by=c("stromal"), cols = c(colors.use[16],colors.use[14],colors.use[17],colors.use[13],"pink",colors.use[18],"firebrick",colors.use[15],"lightgrey"), split.by = "tumor.model", pt.size = 1
-)
+Idents(merged) <-"tumor.model"
+gsmo <- subset(merged, idents = "GSMO")
+msmo <- subset(merged, idents = "MSMO")
+
+pdf("figure_2d_seed_gsmo.pdf")
+DimPlot(gsmo, group.by=c("stromal"), order = c("Meg3","Sox10","C1qb","Aqp4","Col3a1","Pecam1","Rsph1","Mog",'zzz'), cols = rev(c(colors.use[14:19],colors.use[21:22],"lightgrey")),pt.size = 1)
+DimPlot(msmo, group.by=c("stromal"), order = c("Meg3","Sox10","C1qb","Aqp4","Col3a1","Pecam1","Rsph1","Mog",'zzz'), cols = rev(c(colors.use[14:19],colors.use[21:22],"lightgrey")),pt.size = 1)
 dev.off()
+
 
 #figure 2e
 
-y <- 20
+y <- 22
 q<- 0:(y-1)
 percent_node <- matrix(0, nrow = y, ncol = 11)
 mice <- c("M6","M7", "M8","M9", "M11","G6","G7","G8","G9","G10","G11")
-
+Idents(merged)<-"seurat_clusters"
 for (i in 1:y) {
   for(j in 1:length(mice)){
-percent_node[i,j] <- length(grep(mice[[j]], WhichCells(merged, idents = (i-1)), value=T))  / length(grep(mice[[j]], WhichCells(merged, idents = 0:19, value=T)))
+percent_node[i,j] <- length(grep(mice[[j]], WhichCells(merged, idents = (i-1)), value=T))  / length(grep(mice[[j]], WhichCells(merged, idents = 0:21, value=T)))
   }
 }
-
 percent <- as.vector(percent_node)
 cluster <- rep(0:(y-1),11)
 model <- c(rep("MSMO",5*y), rep("GSMO",6*y))
-
 df <- data.frame(percent,cluster,model)
-head(df)
-
 df$model <- as.factor(df$model)
 df$cluster <- as.factor(df$cluster)
 
-pdf("figure_2e.pdf", width=10)
+pdf("figure_2e.pdf", width=11)
 ggbarplot(df, x = "cluster", y = "percent", 
           add = c("mean_se", "jitter"),
           color = "model", palette = c("#00AFBB", "#E7B800"),
@@ -200,8 +216,24 @@ dev.off()
 #figure 2f
 
 pdf("figure_2f.pdf")
-FeaturePlot(merged, features = c( "Nes", "Vim","Olig1","Olig2"), split.by = "tumor.model", order=T)
+FeaturePlot(merged, features = c( "Nes", "Vim"), split.by = "tumor.model", order=T)
+FeaturePlot(merged, features = c( "Olig1","Olig2"), split.by = "tumor.model", order=T)
 dev.off()
+
+#genlist for cluster 7
+Idents(merged) <- "tumor.model"
+gsmo <- subset(x = merged, ident = "GSMO")
+msmo <- subset(x = merged, ident = "MSMO")
+Idents(gsmo) <- "seurat_clusters"
+Idents(msmo) <- "seurat_clusters"
+gsmo1 <- subset(x = gsmo, ident = 7)
+msmo1 <- subset(x = msmo, ident = c(0:6,8:13))
+test<- merge(gsmo1,msmo1)
+Idents(test) <- "tumor.model"
+clust0 <- FindMarkers(test,ident.1 = "GSMO",ident.2="MSMO",  logfc.threshold = .01,min.pct = 0.01)
+clust0$ratio <- clust0[,3]/(clust0[,4]+.0000001)
+out <- clust0[order(-clust0[,6]), ]
+write.xlsx(out, file = paste0('GM_SEED_cluster_7_',i,'_markers.xlsx'))
 
 #figure 4 a-f
 pdf("figure_4a-f.pdf")
@@ -210,8 +242,9 @@ FeaturePlot(merged, features = c(  "Barhl1", "Ascl1"), split.by = "tumor.model",
 FeaturePlot(merged, features = c( "Pax3","Pax2"), split.by = "tumor.model", order=T)
 dev.off()
 
-#read in normal P7 cerebellum seurat object from Ocasio et al. and add metadata
-WT <- readRDS('WT Seurat object from Ocasio et al.')
+#read in normal P7 cerebellum seurat object from Ocasio et al.
+
+WT <- readRDS('pathname to WT Seurat object')
 WT[["percent.mt"]] <- PercentageFeatureSet(WT, pattern = "^mt-")
 WT[["harmony_stat"]] <- "wildtype"
 merged[["harmony_stat"]] <- "tumor"
@@ -220,16 +253,33 @@ merged[["harmony_stat"]] <- "tumor"
 merged1 <- merge(x = merged, y = WT,  merge.data = TRUE)
 merged1 <- SCTransform(merged1, vars.to.regress = c("percent.mt","nFeature_RNA","nCount_RNA") , verbose = T)
 merged1 <- RunPCA(merged1, verbose = FALSE, seed.use = 42)
-merged1 <- RunHarmony(merged1, "harmony_stat", plot_convergence = F)
-merged1 <- RunUMAP(merged1, dims = 1:50, verbose = FALSE, seed.use = 42,   reduction = "harmony")
-merged1 <- FindNeighbors(merged1, dims = 1:50, verbose = FALSE)
+merged1 <- RunHarmony(merged1, "harmony_stat", plot_convergence = F, assay.use="SCT")
+merged1 <- RunUMAP(merged1, dims = 1:50, verbose = FALSE, seed.use = 42, reduction = "harmony")
+merged1 <- FindNeighbors(merged1, dims = 1:50, verbose = FALSE,reduction = "harmony")
 merged1 <- FindClusters(merged1, resolution = 1.5)
+
+#saveRDS(merged1, "/proj/gershont/projects/GSMO_MSMO_WT_seed05062020_harmony.rds")
+merged1 <- readRDS( "/proj/gershont/projects/GSMO_MSMO_WT_seed05062020_harmony.rds")
+
+#differential expression
+Idents(merged1) <- "seurat_clusters"
+clust0 <- FindMarkers(merged1,ident.1 = 0,  logfc.threshold = .25)
+clust0$ratio <- clust0[,3]/(clust0[,4]+.0000001)
+out <- clust0[order(-clust0[,6]), ]
+write.xlsx(out, file="MG_WT_harmony_seeded.xlsx", sheetName="cluster 0")
+for (i in 1:26) {
+clust0 <- FindMarkers(merged1,ident.1 = i,  logfc.threshold = .25)
+clust0$ratio <- clust0[,3]/(clust0[,4]+.0000001)
+out <- clust0[order(-clust0[,6]), ]
+write.xlsx(out, file="MG_WT_harmony_seeded.xlsx", sheetName=paste0("cluster ",i), append=TRUE)
+}
 
 # figure 5a
 
 all <- WhichCells(object = merged1, expression = Olig2 > -1)
 C1qb <- all %in% WhichCells(object = merged1, expression = C1qb > 1)
 Col3a1 <- all %in% WhichCells(object = merged1, expression = Col3a1 > 1.5)
+Meg3 <- all %in% WhichCells(object = merged1, expression = Meg3 > 1.5)
 Rbfox3 <- all %in% WhichCells(object = merged1, expression = Rbfox3 > 1)
 Sox10 <- all %in% WhichCells(object = merged1, expression = Sox10 > 0.8)
 Aqp4 <- all %in% WhichCells(object = merged1, expression = Aqp4 > 1.5)
@@ -238,8 +288,8 @@ Rsph1 <- all %in% WhichCells(object = merged1, expression = Rsph1 > 1)
 Mog <- all %in% WhichCells(object = merged1, expression = Mog > 1)
 total <- data.frame(C1qb,Col3a1,Meg3,Sox10,Aqp4,Pecam1,Rsph1,Mog)
 total$ident <- 'zzz'
-
-for (i in 1:14632) {
+  
+ for (i in 1:21668) {
   if(total[i,1]) {
     total[i,9] <- "C1qb"
   }
@@ -268,29 +318,35 @@ for (i in 1:14632) {
 
 merged1[["stromal"]] <- total[,9]
 
-pdf("figure_5a.pdf")
-DimPlot(merged, group.by=c("stromal"), cols = c(colors.use[16],colors.use[14],colors.use[17],colors.use[13],"pink",colors.use[18],"firebrick",colors.use[15], "lightgrey"), pt.size = 1)
+pdf("figure_5a_seed.pdf")
+DimPlot(merged1, group.by=c("stromal"), order = c("Meg3","Sox10","C1qb","Aqp4","Col3a1","Pecam1","Rsph1","Mog",'zzz'), cols = rev(c(colors.use[14:19],colors.use[21:22],"lightgrey")) ,pt.size = 1)
 dev.off()
 
 # figure 5b-g
 
-#subset Pecam1+ cluster and run same steps as before
-c12 <- subset(x = merged1, idents  = 21)
+c12 <- subset(x = merged1, idents  = 20)
 c12 <- SCTransform(c12, vars.to.regress = c("percent.mt","nFeature_RNA","nCount_RNA") , verbose = T)
 c12 <- RunHarmony(c12, "harmony_stat", plot_convergence = F,assay.use="SCT")
 c12 <- RunUMAP(c12, dims = 1:50, verbose = FALSE, seed.use = 42, reduction = "harmony")
-c12 <- FindNeighbors(c12, dims = 1:50, verbose = FALSE)
+c12 <- FindNeighbors(c12, dims = 1:50, verbose = FALSE, reduction = "harmony")
 c12 <- FindClusters(c12, resolution = .4)
+for (i in 0:1) {
+clust0 <- FindMarkers(c12,ident.1 = i,  logfc.threshold = .10)
+clust0$ratio <- clust0[,3]/(clust0[,4]+.0000001)
+out <- clust0[order(-clust0[,6]), ]
+write.xlsx(out, file = paste0('GM_WT_endo_',i,'_markers.xlsx'))
+}
 
 y <- 2
 q<- 0:(y-1)
 percent_node <- matrix(0, nrow = y, ncol = 16)
+mice <- c("M6","M7", "M8","M9", "M11","G6","G7","G8","G9","G10","G11","WT01" ,"WT02" ,"WT03" ,"WT04" ,"WT05")
 Idents(c12) <- "seurat_clusters"
-Idents(merged1) <- "harmony_stat"
+Idents(merged1) <- "seurat_clusters"
 levels(c12)
 for (i in 1:y) {
   for(j in 1:16){
-percent_node[i,j] <- length(grep(mice[[j]], WhichCells(c12, idents = (i-1)), value=T))  / length(grep(mice[[j]], WhichCells(merged1, idents = c("tumor", "WT"), value=T)))
+percent_node[i,j] <- length(grep(mice[[j]], WhichCells(c12, idents = (i-1)), value=T))  / length(grep(mice[[j]], WhichCells(merged1, idents = 0:26, value=T)))
   }
 }
 
@@ -299,6 +355,7 @@ cluster <- rep(0:(y-1),16)
 model <- c(rep("MSMO",5*y), rep("GSMO",6*y), rep("WT",5*y))
 
 df <- data.frame(percent,cluster,model)
+
 df$model <- as.factor(df$model)
 df$cluster <- as.factor(df$cluster)
 
@@ -359,26 +416,33 @@ for (i in 1:length(all)) {
 
 c12[["cluster_1"]] <- total11[,4]
 
+
 pdf("figure_5b-g.pdf")
 DimPlot(c12, group.by=c("seurat_clusters"), cols = colors.use ,pt.size = 3)
 DimPlot(c12, group.by=c("tumor.model"),pt.size = 3)
 ggbarplot(df, x = "cluster", y = "percent", 
           add = c("mean_se", "jitter"),
           color = "model", palette = c("#00AFBB", "#E7B800", "red"),
-          position = position_dodge(0.8)) + stat_compare_means(aes(group = model), label = "p.signif")
+          position = position_dodge(0.8)) + stat_compare_means(aes(group = model), label = "p.signif",hide.ns=T)
 DimPlot(c12, group.by=c("total"), cols = c("#00AFBB", "#E7B800","lightgrey") ,pt.size = 3)
 DimPlot(c12, group.by=c("cluster_0"), cols = c("#00AFBB","#E7B800","lightgrey") ,pt.size = 3)
 DimPlot(c12, group.by=c("cluster_1"), cols = c("#00AFBB", "#E7B800", "red","lightgrey") ,pt.size = 3)
 dev.off()
 
 # figure 6a-h
-#subset C1qb+ cluster and run same steps as before
+
 c12 <- subset(x = merged1, idents  = 15)
 c12 <- SCTransform(c12, vars.to.regress = c("percent.mt","nFeature_RNA","nCount_RNA") , verbose = T)
 c12 <- RunHarmony(c12, "harmony_stat", plot_convergence = F,assay.use="SCT")
 c12 <- RunUMAP(c12, dims = 1:50, verbose = FALSE, seed.use = 42, reduction = "harmony")
-c12 <- FindNeighbors(c12, dims = 1:50, verbose = FALSE)
-c12 <- FindClusters(c12, resolution = .3)
+c12 <- FindNeighbors(c12, dims = 1:50, verbose = FALSE, reduction = "harmony")
+c12 <- FindClusters(c12, resolution = .2)
+for (i in 0:3) {
+clust0 <- FindMarkers(c12,ident.1 = i,  logfc.threshold = .10)
+clust0$ratio <- clust0[,3]/(clust0[,4]+.0000001)
+out <- clust0[order(-clust0[,6]), ]
+write.xlsx(out, file = paste0('GM_WT_immune_cell_',i,'_markers.xlsx'))
+}
 
 y <- 4
 q<- 0:(y-1)
@@ -386,11 +450,11 @@ percent_node <- matrix(0, nrow = y, ncol = 16)
 mice <- c("M6","M7", "M8","M9", "M11","G6","G7","G8","G9","G10","G11","WT01" ,"WT02" ,"WT03" ,"WT04" ,"WT05")
 
 Idents(c12) <- "seurat_clusters"
-Idents(merged1) <- "harmony_stat"
+Idents(merged1) <- "seurat_clusters"
 levels(c12)
 for (i in 1:y) {
   for(j in 1:16){
-percent_node[i,j] <- length(grep(mice[[j]], WhichCells(c12, idents = (i-1)), value=T))  / length(grep(mice[[j]], WhichCells(merged1, idents = c("tumor", "WT"), value=T)))
+percent_node[i,j] <- length(grep(mice[[j]], WhichCells(c12, idents = (i-1)), value=T))  / length(grep(mice[[j]], WhichCells(merged1, idents = 0:26, value=T)))
   }
 }
 
@@ -411,6 +475,7 @@ total22 <- data.frame(C1qb)
 total22$ident <- 'zzz'
 
 for (i in 1:length(all)) {
+
         if(total22[i,1]) {
     total22[i,2] <- "C1qb"
         }
@@ -476,7 +541,7 @@ for (i in 1:length(all)) {
     total4[i,5] <- "Cd74"
       }
     if(total4[i,1]) {
-    total4[i,5] <- "H2-Ea"
+    total4[i,5] <- "H2-Ea-ps"
   }
         if(total4[i,3]) {
     total4[i,5] <- "Ccr2"
@@ -487,27 +552,6 @@ for (i in 1:length(all)) {
 }
 
 c12[["cluster_2"]] <- total4[,5]
-
-total41 <- data.frame(H2,Ccr2,Cd74)
-total41$ident <- 'zzz'
-  
-
-for (i in 1:length(all)) {
-
-      if(total41[i,3]) {
-    total41[i,4] <- "Cd74"
-      }
-    if(total41[i,1]) {
-    total41[i,4] <- "H2-Ea"
-  }
-        if(total41[i,2]) {
-    total41[i,4] <- "Ccr2"
-        }
-}
-
-c12[["cluster_2_1"]] <- total41[,4]
-
-
 
 Mrc1 <- all %in% WhichCells(object = c12, expression = Mrc1 > 0)
 Cd163 <- all %in% WhichCells(object = c12, expression = Cd163 > 0)
@@ -526,7 +570,6 @@ for (i in 1:length(all)) {
 
 c12[["cluster_3"]] <- total5[,3]
 
-
 pdf("figure_6a-h.pdf")
 DimPlot(c12, group.by=c("seurat_clusters"), cols = colors.use ,pt.size = 3)
 FeaturePlot(c12, features = c("C1qb"), order=T, pt.size = 3)
@@ -535,32 +578,36 @@ DimPlot(c12, group.by=c("tumor.model"),pt.size = 3)
 ggbarplot(df, x = "cluster", y = "percent", 
           add = c("mean_se", "jitter"),
           color = "model", palette = c("#00AFBB", "#E7B800", "red"),
-          position = position_dodge(0.8)) + stat_compare_means(aes(group = model), label = "p.signif")
+          position = position_dodge(0.8)) + stat_compare_means(aes(group = model), label = "p.signif", hide.ns = T)
 DimPlot(c12, group.by=c("cluster_0"), cols = c("#00AFBB", "#E7B800","lightgrey") ,pt.size = 3)
 DimPlot(c12, group.by=c("cluster_1"), cols = c("#00AFBB", "#E7B800", "red","lightgrey") ,pt.size = 3)
 DimPlot(c12, group.by=c("cluster_2"), cols = c("#00AFBB", "#E7B800", "red","darkgreen","lightgrey") ,pt.size = 3)
-DimPlot(c12, group.by=c("cluster_2_1"), cols = c("#00AFBB", "#E7B800", "red","lightgrey") ,pt.size = 3)
 DimPlot(c12, group.by=c("cluster_3"), cols = c("#00AFBB", "#E7B800","lightgrey") ,pt.size = 3)
 dev.off()
 
 # figure 7a-g
-#subset Col3a1+ cluster and run same steps as before
-c12 <- subset(x = merged1, idents  = 17)
+
+c12 <- subset(x = merged1, idents  = 18)
 c12 <- SCTransform(c12, vars.to.regress = c("percent.mt","nFeature_RNA","nCount_RNA") , verbose = T)
 c12 <- RunHarmony(c12, "harmony_stat", plot_convergence = F,assay.use="SCT")
 c12 <- RunUMAP(c12, dims = 1:50, verbose = FALSE, seed.use = 42, reduction = "harmony")
 c12 <- FindNeighbors(c12, dims = 1:50, verbose = FALSE)
 c12 <- FindClusters(c12, resolution = .4)
+for (i in 0:2) {
+clust0 <- FindMarkers(c12,ident.1 = i,  logfc.threshold = .10)
+clust0$ratio <- clust0[,3]/(clust0[,4]+.0000001)
+out <- clust0[order(-clust0[,6]), ]
+write.xlsx(out, file = paste0('GM_WT_fibroblast_',i,'_markers.xlsx'))
+}
 
 y <- 3
 q<- 0:(y-1)
 percent_node <- matrix(0, nrow = y, ncol = 16)
 Idents(c12) <- "seurat_clusters"
-Idents(merged1) <- "harmony_stat"
-
+Idents(merged1) <- "seurat_clusters"
 for (i in 1:y) {
   for(j in 1:16){
-percent_node[i,j] <- length(grep(mice[[j]], WhichCells(c12, idents = (i-1)), value=T))  / length(grep(mice[[j]], WhichCells(merged1, idents = c("tumor", "WT"), value=T)))
+percent_node[i,j] <- length(grep(mice[[j]], WhichCells(c12, idents = (i-1)), value=T))  / length(grep(mice[[j]], WhichCells(merged1, idents = 0:26, value=T)))
   }
 }
 
@@ -650,7 +697,7 @@ DimPlot(c12, group.by=c("tumor.model"),pt.size = 3)
 ggbarplot(df, x = "cluster", y = "percent", 
           add = c("mean_se", "jitter"),
           color = "model", palette = c("#00AFBB", "#E7B800", "red"),
-          position = position_dodge(0.8)) + stat_compare_means(aes(group = model), label = "p.signif")
+          position = position_dodge(0.8)) + stat_compare_means(aes(group = model), label = "p.signif", hide.ns = T)
 DimPlot(c12, group.by=c("cluster_0"), cols = c("#00AFBB", "#E7B800","lightgrey") ,pt.size = 3)
 DimPlot(c12, group.by=c("cluster_1"), cols = c("#00AFBB", "#E7B800","lightgrey") ,pt.size = 3)
 DimPlot(c12, group.by=c("cluster_2"), cols = c("#00AFBB","lightgrey") ,pt.size = 3)
