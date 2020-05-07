@@ -1,8 +1,13 @@
 title: "Computational Analysis for Malawsky et al."
 author: "Daniel Malawsky"
 date: "04/06/2020"
+version: R 3.5.0
 
 ```{r}
+
+#load libraries used in the following data analysis, make vector of colors 
+#for cluster visualization and set seed for downsampling
+
 library(Seurat)
 library(xlsx)
 library(RColorBrewer)
@@ -19,56 +24,68 @@ library(harmony)
 library(colorspace)
 library(SeuratWrappers)
 library(DropletUtils)
-
-colors.use <- c(brewer.pal(8, 'Set1'), brewer.pal(7, 'Dark2'),  'blue4', 'orangered', 'orangered4',"firebrick","black","green","purple","pink")
-
+colors.use <- c(brewer.pal(8, 'Set1'), brewer.pal(7, 'Dark2'),  'blue4',
+'orangered', 'orangered4',"firebrick","black","green","purple","pink")
 set.seed(05062020)
 
 #read in Gsmo and Msmo seurat objects
+#alternatively, if using DGEs, skip this step
 
 GSMO <- readRDS('pathname to GSMO Seurat object')
 MSMO <- readRDS('pathname to MSMO Seurat object')
-test <- GetAssayData(object = GSMO, slot = 'data')
 
 #remove unwanted transcript
+#if using DGEs, read in GSMO DGE to test and
+#MSMO DGE to test1
 
+test <- GetAssayData(object = GSMO, slot = 'data')
 remove <- c("CRE-RECOMBINASE","Prm1")
 test <- test[!rownames(test) %in% remove, ]
 test <- downsampleMatrix(test, .6, bycol=TRUE)
 GSMO <- CreateSeuratObject(test, project = "SeuratProject", assay = "RNA",
   min.cells = 0, min.features = 0, names.field = 1,
   names.delim = "_", meta.data = NULL)
+  
 test1 <- GetAssayData(object = MSMO, slot = 'data')
 remove <- c("CRE-RECOMBINASE","Prm1")
 test1 <- test1[!rownames(test1) %in% remove, ]
 MSMO <- CreateSeuratObject(test1, project = "SeuratProject", assay = "RNA",
   min.cells = 0, min.features = 0, names.field = 1,
   names.delim = "_", meta.data = NULL)
+  
+#add meta data to seurat objects
+
 GSMO[["percent.mt"]] <- PercentageFeatureSet(GSMO, pattern = "^mt-")
 GSMO[["tumor.model"]] <- "GSMO"
 MSMO[["percent.mt"]] <- PercentageFeatureSet(MSMO, pattern = "^mt-")
 MSMO[["tumor.model"]] <- "MSMO"
 
+#merge MSMO and GSMO datasets to make single seurat object
 #filter merged object based on QC criteria
 
 merged <- merge(x = MSMO, y = GSMO,  merge.data = TRUE)
 max.UMI <- 4*sd(merged@meta.data$nCount_RNA) + median(merged@meta.data$nCount_RNA)
 max.Gene <- 4*sd(merged@meta.data$nFeature_RNA) + median(merged@meta.data$nFeature_RNA)
-merged <- subset(merged, subset =  nCount_RNA > 500 & nCount_RNA < max.UMI & nFeature_RNA > 200 & nFeature_RNA < max.Gene & percent.mt < 10)
+merged <- subset(merged, subset =  nCount_RNA > 500 & nCount_RNA < max.UMI & 
+nFeature_RNA > 200 & nFeature_RNA < max.Gene & percent.mt < 10)
 
-#normalize data, calculate PCs, UMAP, and louvain clustering
-merged <- SCTransform(merged, vars.to.regress = c("percent.mt","nFeature_RNA","nCount_RNA") , verbose = T)
+#normalize data, calculate PCs, UMAP coordinates , and louvain clustering
+
+merged <- SCTransform(merged, vars.to.regress = 
+c("percent.mt","nFeature_RNA","nCount_RNA"), verbose = T)
 merged <- RunPCA(merged, verbose = T, seed.use = 42)
 merged <- RunUMAP(merged, dims = 1:17, verbose = FALSE, seed.use = 42)
 merged <- FindNeighbors(merged, dims = 1:17, verbose = FALSE)
 merged <- FindClusters(merged, resolution = 1.2)
 
-#percent variation explained by 17 PCs
+#calculate percent variation explained by 17 PCs
+
 string <- Stdev(merged, reduction = "pca")
 eig <- (string^2)
 sum(eig[1:17]) / sum(eig)
 
-#differential expression
+#differential expression analysis of clusters
+
 Idents(merged) <- "seurat_clusters"
 for (i in 0:21) {
 clust0 <- FindMarkers(merged,ident.1 = i,  logfc.threshold = .10)
@@ -77,12 +94,18 @@ out <- clust0[order(-clust0[,6]), ]
 write.xlsx(out, file = paste0('GM_SEED_cluster_',i,'_markers.xlsx'))
 }
 
+
 #figure 2a
+
 pdf("figure_2a_seed.pdf")
 DimPlot(merged, group.by=c("seurat_clusters"), cols = colors.use,pt.size = 1)
 dev.off()
 
+
 #figure 2b
+
+#make vectors designating which cell expresses a given stromal marker
+
 all <- WhichCells(object = merged, expression = Olig2 > -1)
 C1qb <- all %in% WhichCells(object = merged, expression = C1qb > 1)
 Col3a1 <- all %in% WhichCells(object = merged, expression = Col3a1 > 1)
@@ -94,9 +117,13 @@ Pecam1 <- all %in% WhichCells(object = merged, expression = Pecam1 > 0.75)
 Rsph1 <- all %in% WhichCells(object = merged, expression = Rsph1 > 1)
 Mog <- all %in% WhichCells(object = merged, expression = Mog > 1)
 
+#merge vectors and make column to be used for final identity designation
+
 total <- data.frame(C1qb,Col3a1,Meg3,Sox10,Aqp4,Pecam1,Rsph1,Mog)
 total$ident <- 'zzz'
   
+#make identity vector and add it to meta data
+
 for (i in 1:14633) {
   if(total[i,1]) {
     total[i,9] <- "C1qb"
@@ -126,11 +153,17 @@ for (i in 1:14633) {
 
 merged[["stromal"]] <- total[,9]
 
-pdf("figure_2b_seed.pdf")
-DimPlot(merged, group.by=c("stromal"), order = c("Meg3","Sox10","C1qb","Aqp4","Col3a1","Pecam1","Rsph1","Mog",'zzz'), cols = rev(c(colors.use[14:19],colors.use[21:22],"lightgrey")),pt.size = 1)
+pdf("figure_2b.pdf")
+DimPlot(merged, group.by=c("stromal"), order = c("Meg3","Sox10","C1qb",
+"Aqp4","Col3a1","Pecam1","Rsph1","Mog",'zzz'),
+cols = rev(c(colors.use[14:19],colors.use[21:22],"lightgrey")),pt.size = 1)
 dev.off()
 
+
 #figure 2c
+
+#make vectors designating which cell expresses a given differentiation
+#axis marker
 
 Mki67 <- all %in% WhichCells(object = merged, expression = Mki67 > 1)
 Gli1 <- all %in% WhichCells(object = merged, expression = Gli1 > .6)  
@@ -139,9 +172,13 @@ Cntn2 <- all %in% WhichCells(object = merged, expression = Cntn2 > 1.25)
 Rbfox3 <- all %in% WhichCells(object = merged, expression = Rbfox3 > 1.25) 
 Grin2b <- all %in% WhichCells(object = merged, expression = Grin2b > 0)
 
+#merge vectors and make column to be used for final identity designation
+
 total <- data.frame(Mki67,Gli1,Barhl1,Cntn2,Rbfox3,Grin2b)
 total$ident <- 'zzz'
-  
+ 
+#make identity vector and add it to meta data
+
 for (i in 1:14633) {
   if(total[i,5]) {
     total[i,7] <- "Rbfox3"
@@ -168,26 +205,36 @@ merged[["gene_set"]] <- total[,7]
 
 Idents(merged) <- "gene_set"
 
-
 pdf("figure_2c_seed.pdf")
-DimPlot(merged, group.by=c("gene_set"), cols = c("lightgrey","tomato1","skyblue2","red",brewer.pal(10,'Paired')[c(9)],"tan1","yellowgreen"), order = rev(c("zzz","Rbfox3","Barhl1","Gli1","Mki67","Grin2b","Cntn2")), 
+DimPlot(merged, group.by=c("gene_set"), cols = c("lightgrey","tomato1",
+"skyblue2","red",brewer.pal(10,'Paired')[c(9)],"tan1","yellowgreen"), 
+order = rev(c("zzz","Rbfox3","Barhl1","Gli1","Mki67","Grin2b","Cntn2")), 
 pt.size = 1)
 dev.off()
 
 
 #figure 2d
 
+#deconvolute merged seurat object into and MSMO and GSMO object
 Idents(merged) <-"tumor.model"
 gsmo <- subset(merged, idents = "GSMO")
 msmo <- subset(merged, idents = "MSMO")
 
-pdf("figure_2d_seed_gsmo.pdf")
-DimPlot(gsmo, group.by=c("stromal"), order = c("Meg3","Sox10","C1qb","Aqp4","Col3a1","Pecam1","Rsph1","Mog",'zzz'), cols = rev(c(colors.use[14:19],colors.use[21:22],"lightgrey")),pt.size = 1)
-DimPlot(msmo, group.by=c("stromal"), order = c("Meg3","Sox10","C1qb","Aqp4","Col3a1","Pecam1","Rsph1","Mog",'zzz'), cols = rev(c(colors.use[14:19],colors.use[21:22],"lightgrey")),pt.size = 1)
+pdf("figure_2d.pdf")
+DimPlot(gsmo, group.by=c("stromal"), order = c("Meg3","Sox10","C1qb",
+"Aqp4","Col3a1","Pecam1","Rsph1","Mog",'zzz'),
+cols = rev(c(colors.use[14:19],colors.use[21:22],"lightgrey")),pt.size = 1)
+
+DimPlot(msmo, group.by=c("stromal"), order = c("Meg3","Sox10","C1qb",
+"Aqp4","Col3a1","Pecam1","Rsph1","Mog",'zzz'),
+cols = rev(c(colors.use[14:19],colors.use[21:22],"lightgrey")),pt.size = 1)
 dev.off()
 
 
 #figure 2e
+
+#make matrix of replicate cluster contribution normalized to
+#total cells
 
 y <- 22
 q<- 0:(y-1)
@@ -196,7 +243,8 @@ mice <- c("M6","M7", "M8","M9", "M11","G6","G7","G8","G9","G10","G11")
 Idents(merged)<-"seurat_clusters"
 for (i in 1:y) {
   for(j in 1:length(mice)){
-percent_node[i,j] <- length(grep(mice[[j]], WhichCells(merged, idents = (i-1)), value=T))  / length(grep(mice[[j]], WhichCells(merged, idents = 0:21, value=T)))
+percent_node[i,j] <- length(grep(mice[[j]], WhichCells(merged, idents = (i-1)), value=T))
+/ length(grep(mice[[j]], WhichCells(merged, idents = 0:21, value=T)))
   }
 }
 percent <- as.vector(percent_node)
@@ -210,8 +258,10 @@ pdf("figure_2e.pdf", width=11)
 ggbarplot(df, x = "cluster", y = "percent", 
           add = c("mean_se", "jitter"),
           color = "model", palette = c("#00AFBB", "#E7B800"),
-          position = position_dodge(0.8)) + stat_compare_means(aes(group = model), label = "p.signif",hide.ns=T)
+          position = position_dodge(0.8)) + stat_compare_means(aes(group = model),
+          label = "p.signif",hide.ns=T)
 dev.off()
+
 
 #figure 2f
 
@@ -220,7 +270,10 @@ FeaturePlot(merged, features = c( "Nes", "Vim"), split.by = "tumor.model", order
 FeaturePlot(merged, features = c( "Olig1","Olig2"), split.by = "tumor.model", order=T)
 dev.off()
 
-#genlist for cluster 7
+
+#make gene list for cluster 7 comparing GSMO cluster 7
+#to MSMO tumor clusters
+
 Idents(merged) <- "tumor.model"
 gsmo <- subset(x = merged, ident = "GSMO")
 msmo <- subset(x = merged, ident = "MSMO")
@@ -235,21 +288,26 @@ clust0$ratio <- clust0[,3]/(clust0[,4]+.0000001)
 out <- clust0[order(-clust0[,6]), ]
 write.xlsx(out, file = paste0('GM_SEED_cluster_7_',i,'_markers.xlsx'))
 
+
 #figure 4 a-f
+
 pdf("figure_4a-f.pdf")
 FeaturePlot(merged, features = c(  "SmoM2-EYFP","Eomes"), split.by = "tumor.model", order=T)
 FeaturePlot(merged, features = c(  "Barhl1", "Ascl1"), split.by = "tumor.model", order=T)
 FeaturePlot(merged, features = c( "Pax3","Pax2"), split.by = "tumor.model", order=T)
 dev.off()
 
+
 #read in normal P7 cerebellum seurat object from Ocasio et al.
+#and add meta data
 
 WT <- readRDS('pathname to WT Seurat object')
 WT[["percent.mt"]] <- PercentageFeatureSet(WT, pattern = "^mt-")
 WT[["harmony_stat"]] <- "wildtype"
 merged[["harmony_stat"]] <- "tumor"
 
-#merge, normalize data, calculate PCs, Harmony, UMAP
+#normalize data, calculate PCs, Harmony, UMAP coordinates, and louvain clustering
+
 merged1 <- merge(x = merged, y = WT,  merge.data = TRUE)
 merged1 <- SCTransform(merged1, vars.to.regress = c("percent.mt","nFeature_RNA","nCount_RNA") , verbose = T)
 merged1 <- RunPCA(merged1, verbose = FALSE, seed.use = 42)
@@ -258,7 +316,8 @@ merged1 <- RunUMAP(merged1, dims = 1:50, verbose = FALSE, seed.use = 42, reducti
 merged1 <- FindNeighbors(merged1, dims = 1:50, verbose = FALSE,reduction = "harmony")
 merged1 <- FindClusters(merged1, resolution = 1.5)
 
-#differential expression
+#differential expression 
+
 Idents(merged1) <- "seurat_clusters"
 clust0 <- FindMarkers(merged1,ident.1 = 0,  logfc.threshold = .25)
 clust0$ratio <- clust0[,3]/(clust0[,4]+.0000001)
@@ -271,7 +330,10 @@ out <- clust0[order(-clust0[,6]), ]
 write.xlsx(out, file="MG_WT_harmony_seeded.xlsx", sheetName=paste0("cluster ",i), append=TRUE)
 }
 
+
 # figure 5a
+
+#same steps as for figure 2b
 
 all <- WhichCells(object = merged1, expression = Olig2 > -1)
 C1qb <- all %in% WhichCells(object = merged1, expression = C1qb > 1)
@@ -320,6 +382,11 @@ DimPlot(merged1, group.by=c("stromal"), order = c("Meg3","Sox10","C1qb","Aqp4","
 dev.off()
 
 # figure 5b-g
+
+#for each stromal cluster (figures 5-7) normalize data, calculate PCs, Harmony,
+#UMAP coordinates, differential gene lists,
+#and louvain clustering followed by cluster contribution 
+#analysis and cluster markers meta data designations
 
 c12 <- subset(x = merged1, idents  = 20)
 c12 <- SCTransform(c12, vars.to.regress = c("percent.mt","nFeature_RNA","nCount_RNA") , verbose = T)
@@ -425,6 +492,7 @@ DimPlot(c12, group.by=c("total"), cols = c("#00AFBB", "#E7B800","lightgrey") ,pt
 DimPlot(c12, group.by=c("cluster_0"), cols = c("#00AFBB","#E7B800","lightgrey") ,pt.size = 3)
 DimPlot(c12, group.by=c("cluster_1"), cols = c("#00AFBB", "#E7B800", "red","lightgrey") ,pt.size = 3)
 dev.off()
+
 
 # figure 6a-h
 
@@ -581,6 +649,7 @@ DimPlot(c12, group.by=c("cluster_1"), cols = c("#00AFBB", "#E7B800", "red","ligh
 DimPlot(c12, group.by=c("cluster_2"), cols = c("#00AFBB", "#E7B800", "red","darkgreen","lightgrey") ,pt.size = 3)
 DimPlot(c12, group.by=c("cluster_3"), cols = c("#00AFBB", "#E7B800","lightgrey") ,pt.size = 3)
 dev.off()
+
 
 # figure 7a-g
 
