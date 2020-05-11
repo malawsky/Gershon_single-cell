@@ -508,17 +508,17 @@ dev.off()
 
 # figure 5b-g
 
-#for each stromal cluster (figures 5-7) normalize data, calculate PCs, Harmony,
+#for each stromal cluster (figures 5-7) normalize data,
 #UMAP coordinates, differential gene lists,
 #and louvain clustering followed by cluster contribution 
 #analysis and cluster markers meta data designations
 
 c12 <- subset(x = merged1, idents  = 20)
 c12 <- SCTransform(c12, vars.to.regress = c("percent.mt","nFeature_RNA","nCount_RNA") , verbose = T)
-c12 <- RunHarmony(c12, "harmony_stat", plot_convergence = F,assay.use="SCT")
-c12 <- RunUMAP(c12, dims = 1:50, verbose = FALSE, seed.use = 42, reduction = "harmony")
-c12 <- FindNeighbors(c12, dims = 1:50, verbose = FALSE, reduction = "harmony")
+c12 <- RunUMAP(c12, dims = 1:50, verbose = FALSE, seed.use = 42)
+c12 <- FindNeighbors(c12, dims = 1:50, verbose = FALSE)
 c12 <- FindClusters(c12, resolution = .4)
+
 for (i in 0:1) {
 clust0 <- FindMarkers(c12,ident.1 = i,  logfc.threshold = .10)
 clust0$ratio <- clust0[,3]/(clust0[,4]+.0000001)
@@ -625,10 +625,10 @@ dev.off()
 
 c12 <- subset(x = merged1, idents  = 15)
 c12 <- SCTransform(c12, vars.to.regress = c("percent.mt","nFeature_RNA","nCount_RNA") , verbose = T)
-c12 <- RunHarmony(c12, "harmony_stat", plot_convergence = F,assay.use="SCT")
-c12 <- RunUMAP(c12, dims = 1:50, verbose = FALSE, seed.use = 42, reduction = "harmony")
-c12 <- FindNeighbors(c12, dims = 1:50, verbose = FALSE, reduction = "harmony")
-c12 <- FindClusters(c12, resolution = .2)
+c12 <- RunUMAP(c12, dims = 1:50, verbose = FALSE, seed.use = 05112020)
+c12 <- FindNeighbors(c12, dims = 1:50, verbose = FALSE)
+c12 <- FindClusters(c12, resolution = .4)
+
 for (i in 0:3) {
 clust0 <- FindMarkers(c12,ident.1 = i,  logfc.threshold = .10)
 clust0$ratio <- clust0[,3]/(clust0[,4]+.0000001)
@@ -636,7 +636,7 @@ out <- clust0[order(-clust0[,6]), ]
 write.xlsx(out, file = paste0('GM_WT_immune_cell_',i,'_markers.xlsx'))
 }
 
-y <- 4
+y <- 5
 q<- 0:(y-1)
 percent_node <- matrix(0, nrow = y, ncol = 16)
 mice <- c("M6","M7", "M8","M9","G6","G7","G8","G9","G10",
@@ -764,6 +764,24 @@ for (i in 1:length(all)) {
 
 c12[["cluster_3"]] <- total5[,3]
 
+
+#####Mrc1 <- all %in% WhichCells(object = c12, expression = Mrc1 > 0)
+Cd163 <- all %in% WhichCells(object = c12, expression = Cd163 > 0)
+total5 <- data.frame(Mrc1 ,Cd163)
+total5$ident <- 'zzz'
+
+for (i in 1:length(all)) {
+
+        if(total5[i,1]) {
+    total5[i,3] <- "Mrc1"
+        }
+    if(total5[i,2]) {
+    total5[i,3] <- "Cd163"
+    }
+}
+
+c12[["cluster_4"]] <- total5[,3]
+#####
 pdf("figure_6a-h.pdf")
 DimPlot(c12, group.by=c("seurat_clusters"), cols = colors.use ,pt.size = 3)
 FeaturePlot(c12, features = c("C1qb"), order=T, pt.size = 3)
@@ -777,6 +795,7 @@ DimPlot(c12, group.by=c("cluster_0"), cols = c("#00AFBB", "#E7B800","lightgrey")
 DimPlot(c12, group.by=c("cluster_1"), cols = c("#00AFBB", "#E7B800", "red","lightgrey") ,pt.size = 3)
 DimPlot(c12, group.by=c("cluster_2"), cols = c("#00AFBB", "#E7B800", "red","darkgreen","lightgrey") ,pt.size = 3)
 DimPlot(c12, group.by=c("cluster_3"), cols = c("#00AFBB", "#E7B800","lightgrey") ,pt.size = 3)
+DimPlot(c12, group.by=c("cluster_4"), cols = c("#00AFBB", "#E7B800","lightgrey") ,pt.size = 3)
 dev.off()
 
 
@@ -784,10 +803,10 @@ dev.off()
 
 c12 <- subset(x = merged1, idents  = 18)
 c12 <- SCTransform(c12, vars.to.regress = c("percent.mt","nFeature_RNA","nCount_RNA") , verbose = T)
-c12 <- RunHarmony(c12, "harmony_stat", plot_convergence = F,assay.use="SCT")
-c12 <- RunUMAP(c12, dims = 1:50, verbose = FALSE, seed.use = 42, reduction = "harmony")
-c12 <- FindNeighbors(c12, dims = 1:50, verbose = FALSE, reduction = "harmony")
-c12 <- FindClusters(c12, resolution = .3)
+c12 <- RunUMAP(c12, dims = 1:50, verbose = FALSE, seed.use = 42)
+c12 <- FindNeighbors(c12, dims = 1:50, verbose = FALSE)
+c12 <- FindClusters(c12, resolution = .4)
+
 for (i in 0:2) {
 clust0 <- FindMarkers(c12,ident.1 = i,  logfc.threshold = .10)
 clust0$ratio <- clust0[,3]/(clust0[,4]+.0000001)
