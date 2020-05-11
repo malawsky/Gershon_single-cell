@@ -639,7 +639,8 @@ write.xlsx(out, file = paste0('GM_WT_immune_cell_',i,'_markers.xlsx'))
 y <- 4
 q<- 0:(y-1)
 percent_node <- matrix(0, nrow = y, ncol = 16)
-mice <- c("M6","M7", "M8","M9", "M11","G6","G7","G8","G9","G10","G11","WT01" ,"WT02" ,"WT03" ,"WT04" ,"WT05")
+mice <- c("M6","M7", "M8","M9","G6","G7","G8","G9","G10",
+"G11","WT01" ,"WT02" ,"WT03" ,"WT04" ,"WT05")
 
 Idents(c12) <- "seurat_clusters"
 Idents(merged1) <- "seurat_clusters"
@@ -768,7 +769,7 @@ DimPlot(c12, group.by=c("seurat_clusters"), cols = colors.use ,pt.size = 3)
 FeaturePlot(c12, features = c("C1qb"), order=T, pt.size = 3)
 DimPlot(c12, group.by=c("c1qb"), cols = c("#00AFBB","lightgrey") ,pt.size = 3)
 DimPlot(c12, group.by=c("tumor.model"),pt.size = 3)
-ggbarplot(df, x = "cluster", y = "percent", 
+ggbarplot(df[-c(17:20),], x = "cluster", y = "percent", 
           add = c("mean_se", "jitter"),
           color = "model", palette = c("#00AFBB", "#E7B800", "red"),
           position = position_dodge(0.8)) + stat_compare_means(aes(group = model), label = "p.signif", hide.ns = T)
