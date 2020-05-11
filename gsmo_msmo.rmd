@@ -629,7 +629,7 @@ c12 <- RunUMAP(c12, dims = 1:50, verbose = FALSE, seed.use = 05112020)
 c12 <- FindNeighbors(c12, dims = 1:50, verbose = FALSE)
 c12 <- FindClusters(c12, resolution = .4)
 
-for (i in 0:3) {
+for (i in 0:4) {
 clust0 <- FindMarkers(c12,ident.1 = i,  logfc.threshold = .10)
 clust0$ratio <- clust0[,3]/(clust0[,4]+.0000001)
 out <- clust0[order(-clust0[,6]), ]
