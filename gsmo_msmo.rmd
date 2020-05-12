@@ -220,7 +220,7 @@ write.xlsx(out, file = paste0('GM_SEED_cluster_',i,'_markers.xlsx'))
 
 #figure 2a
 
-pdf("figure_2a_seed.pdf")
+pdf("figure_2a.pdf")
 DimPlot(merged, group.by=c("seurat_clusters"), cols = colors.use,pt.size = 1)
 dev.off()
 
@@ -328,7 +328,7 @@ merged[["gene_set"]] <- total[,7]
 
 Idents(merged) <- "gene_set"
 
-pdf("figure_2c_seed.pdf")
+pdf("figure_2c.pdf")
 DimPlot(merged, group.by=c("gene_set"), cols = c("lightgrey","tomato1",
 "skyblue2","red",brewer.pal(10,'Paired')[c(9)],"tan1","yellowgreen"), 
 order = rev(c("zzz","Rbfox3","Barhl1","Gli1","Mki67","Grin2b","Cntn2")), 
@@ -500,7 +500,7 @@ total$ident <- 'zzz'
 
 merged1[["stromal"]] <- total[,9]
 
-pdf("figure_5a_seed.pdf")
+pdf("figure_5a.pdf")
 DimPlot(merged1, group.by=c("stromal"), order = c("Meg3","Sox10","C1qb","Aqp4","Col3a1"
 ,"Pecam1","Rsph1","Mog",'zzz'), cols = rev(c(colors.use[14:19],colors.use[21:22],"lightgrey"))
 ,pt.size = 1)
@@ -784,7 +784,6 @@ c12[["cluster_4"]] <- total5[,3]
 #####
 pdf("figure_6a-h.pdf")
 DimPlot(c12, group.by=c("seurat_clusters"), cols = colors.use ,pt.size = 3)
-FeaturePlot(c12, features = c("C1qb"), order=T, pt.size = 3)
 DimPlot(c12, group.by=c("c1qb"), cols = c("#00AFBB","lightgrey") ,pt.size = 3)
 DimPlot(c12, group.by=c("tumor.model"),pt.size = 3)
 ggbarplot(df[-c(17:20),], x = "cluster", y = "percent", 
@@ -817,6 +816,9 @@ write.xlsx(out, file = paste0('GM_WT_fibroblast_',i,'_markers.xlsx'))
 y <- 3
 q<- 0:(y-1)
 percent_node <- matrix(0, nrow = y, ncol = 16)
+mice <- c("M6","M7", "M8","M9", "M11","G6","G7","G8","G9","G10","G11",
+"WT01" ,"WT02" ,"WT03" ,"WT04" ,"WT05")
+
 Idents(c12) <- "seurat_clusters"
 Idents(merged1) <- "seurat_clusters"
 for (i in 1:y) {
