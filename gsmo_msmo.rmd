@@ -149,12 +149,6 @@ library(SeuratWrappers)
 library(DropletUtils)
 colors.use <- c(brewer.pal(8, 'Set1'), brewer.pal(7, 'Dark2'),  'blue4',
 'orangered', 'orangered4',"firebrick","black","green","purple","pink")
-first <- brewer.pal(n = 8, name = "Set2")
-clust0 <- brewer.pal(n = 8, name = "Reds")
-clust1 <- brewer.pal(n = 8, name = "Blues")
-clust2 <- brewer.pal(n = 8, name = "Greens")
-clust3 <- brewer.pal(n = 8, name = "BuPu")
-clust4 <- brewer.pal(n = 8, name = "Oranges")
 set.seed(05062020)
 
 #read in Gsmo and Msmo seurat objects
@@ -513,6 +507,14 @@ DimPlot(merged1, group.by=c("stromal"), order = c("Meg3","Sox10","C1qb","Aqp4","
 dev.off()
 
 # figure 5b-g
+
+#set up color vectors
+first <- brewer.pal(n = 8, name = "Set2")
+clust0 <- brewer.pal(n = 8, name = "Reds")
+clust1 <- brewer.pal(n = 8, name = "Blues")
+clust2 <- brewer.pal(n = 8, name = "Greens")
+clust3 <- brewer.pal(n = 8, name = "BuPu")
+clust4 <- brewer.pal(n = 8, name = "Oranges")
 
 #for each stromal cluster (figures 5-7) normalize data,
 #UMAP coordinates, differential gene lists,
