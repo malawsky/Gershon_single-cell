@@ -31,7 +31,7 @@ kneeplot <- function(mouse, root, xlim){
 #include in the initial expression matrix
 
 pdf('KneePlots.pdf')
-lapply(mice, function(i) kneeplot(i, '/pine/scr/s/e/seth96/', 10000))
+lapply(mice, function(i) kneeplot(i, 'path', 10000))
 dev.off()
 
 
@@ -59,7 +59,7 @@ kneeplot <- function(mouse, root, xlim){
 #cells to include in the initial expression matrix
 
 pdf('KneePlots.pdf')
-lapply(mice1, function(i) kneeplot(i, '/pine/scr/s/e/seth96/', 10000))
+lapply(mice1, function(i) kneeplot(i, 'path', 10000))
 dev.off()
 
 #Importing the data matrices
@@ -85,7 +85,7 @@ min.cells <- 0
 
 prep.Seurat <- function(i){
   message('Starting with Sample ', i)
-  df <- fread(paste0('/pine/scr/s/e/seth96/MSMO/', i, '/out/dge.txt'),
+  df <- fread(paste0('path', i, '/out/dge.txt'),
               stringsAsFactors = F,
               data.table = F, sep = "\t", header = T)
   rownames(df) <- df[, "GENE"]
@@ -110,7 +110,7 @@ min.genes <- 10
 min.cells <- 0
 prep.Seurat <- function(i){
   message('Starting with Sample ', i)
-  df <- fread(paste0('/pine/scr/s/e/seth96/GSMO/', i, '/out/dge.txt'),
+  df <- fread(paste0('path', i, '/out/dge.txt'),
               stringsAsFactors = F,
               data.table = F, sep = "\t", header = T)
   rownames(df) <- df[, "GENE"]
