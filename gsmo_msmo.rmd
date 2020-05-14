@@ -149,6 +149,12 @@ library(SeuratWrappers)
 library(DropletUtils)
 colors.use <- c(brewer.pal(8, 'Set1'), brewer.pal(7, 'Dark2'),  'blue4',
 'orangered', 'orangered4',"firebrick","black","green","purple","pink")
+first <- brewer.pal(n = 8, name = "Set2")
+clust0 <- brewer.pal(n = 8, name = "Reds")
+clust1 <- brewer.pal(n = 8, name = "Blues")
+clust2 <- brewer.pal(n = 8, name = "Greens")
+clust3 <- brewer.pal(n = 8, name = "BuPu")
+clust4 <- brewer.pal(n = 8, name = "Oranges")
 set.seed(05062020)
 
 #read in Gsmo and Msmo seurat objects
@@ -615,9 +621,9 @@ ggbarplot(df, x = "cluster", y = "percent",
           add = c("mean_se", "jitter"),
           color = "model", palette = c("#00AFBB", "#E7B800", "red"),
           position = position_dodge(0.8)) + stat_compare_means(aes(group = model), label = "p.signif",hide.ns=T)
-DimPlot(c12, group.by=c("total"), cols = c("#00AFBB", "#E7B800","lightgrey") ,pt.size = 3)
-DimPlot(c12, group.by=c("cluster_0"), cols = c("#00AFBB","#E7B800","lightgrey") ,pt.size = 3)
-DimPlot(c12, group.by=c("cluster_1"), cols = c("#00AFBB", "#E7B800", "red","lightgrey") ,pt.size = 3)
+DimPlot(c12, group.by=c("total"), cols = c(first[1], first[2],"lightgrey") ,pt.size = 3)
+DimPlot(c12, group.by=c("cluster_0"), cols = c(clust0[4],clust0[7],"lightgrey") ,pt.size = 3)
+DimPlot(c12, group.by=c("cluster_1"), cols = c(clust1[4], clust1[7], clust1[8],"lightgrey") ,pt.size = 3)
 dev.off()
 
 
@@ -765,18 +771,18 @@ for (i in 1:length(all)) {
 c12[["cluster_3"]] <- total5[,3]
 
 
-#####Mrc1 <- all %in% WhichCells(object = c12, expression = Mrc1 > 0)
-Cd163 <- all %in% WhichCells(object = c12, expression = Cd163 > 0)
-total5 <- data.frame(Mrc1 ,Cd163)
+Cnn3 <- all %in% WhichCells(object = c12, expression = Cnn3 > 0)
+Meis1 <- all %in% WhichCells(object = c12, expression = Meis1 > 0)
+total5 <- data.frame(Cnn3 ,Meis1)
 total5$ident <- 'zzz'
 
 for (i in 1:length(all)) {
 
         if(total5[i,1]) {
-    total5[i,3] <- "Mrc1"
+    total5[i,3] <- "Cnn3"
         }
     if(total5[i,2]) {
-    total5[i,3] <- "Cd163"
+    total5[i,3] <- "Meis1"
     }
 }
 
@@ -784,17 +790,17 @@ c12[["cluster_4"]] <- total5[,3]
 #####
 pdf("figure_6a-h.pdf")
 DimPlot(c12, group.by=c("seurat_clusters"), cols = colors.use ,pt.size = 3)
-DimPlot(c12, group.by=c("c1qb"), cols = c("#00AFBB","lightgrey") ,pt.size = 3)
+DimPlot(c12, group.by=c("c1qb"), cols = c(first[1],"lightgrey") ,pt.size = 3)
 DimPlot(c12, group.by=c("tumor.model"),pt.size = 3)
 ggbarplot(df[-c(17:20),], x = "cluster", y = "percent", 
           add = c("mean_se", "jitter"),
           color = "model", palette = c("#00AFBB", "#E7B800", "red"),
           position = position_dodge(0.8)) + stat_compare_means(aes(group = model), label = "p.signif", hide.ns = T)
-DimPlot(c12, group.by=c("cluster_0"), cols = c("#00AFBB", "#E7B800","lightgrey") ,pt.size = 3)
-DimPlot(c12, group.by=c("cluster_1"), cols = c("#00AFBB", "#E7B800", "red","lightgrey") ,pt.size = 3)
-DimPlot(c12, group.by=c("cluster_2"), cols = c("#00AFBB", "#E7B800", "red","darkgreen","lightgrey") ,pt.size = 3)
-DimPlot(c12, group.by=c("cluster_3"), cols = c("#00AFBB", "#E7B800","lightgrey") ,pt.size = 3)
-DimPlot(c12, group.by=c("cluster_4"), cols = c("#00AFBB", "#E7B800","lightgrey") ,pt.size = 3)
+DimPlot(c12, group.by=c("cluster_0"), cols = c(clust0[4],clust0[7],"lightgrey") ,pt.size = 3)
+DimPlot(c12, group.by=c("cluster_1"), cols = c(clust1[7], clust1[4], clust1[8],"lightgrey") ,pt.size = 3)
+DimPlot(c12, group.by=c("cluster_2"), cols = c(clust2[4], clust2[5], clust2[7],clust2[8],"lightgrey") ,pt.size = 3)
+DimPlot(c12, group.by=c("cluster_3"), cols = c(clust3[8], clust3[5],"lightgrey") ,pt.size = 3)
+DimPlot(c12, group.by=c("cluster_4"), cols = c(clust4[5], clust4[8],"lightgrey") ,pt.size = 3)
 dev.off()
 
 
@@ -914,9 +920,9 @@ ggbarplot(df, x = "cluster", y = "percent",
           add = c("mean_se", "jitter"),
           color = "model", palette = c("#00AFBB", "#E7B800", "red"),
           position = position_dodge(0.8)) + stat_compare_means(aes(group = model), label = "p.signif", hide.ns = T)
-DimPlot(c12, group.by=c("cluster_0"), cols = c("#00AFBB", "#E7B800","lightgrey") ,pt.size = 3)
-DimPlot(c12, group.by=c("cluster_1"), cols = c("#00AFBB", "#E7B800","lightgrey") ,pt.size = 3)
-DimPlot(c12, group.by=c("cluster_2"), cols = c("#00AFBB","lightgrey") ,pt.size = 3)
-DimPlot(c12, group.by=c("extra"), cols = c("#00AFBB", "#E7B800","red","lightgrey") ,pt.size = 3)
+DimPlot(c12, group.by=c("cluster_0"), cols = c(clust0[4],clust0[7],"lightgrey") ,pt.size = 3)
+DimPlot(c12, group.by=c("cluster_1"), cols = c(clust1[4],clust1[7],"lightgrey") ,pt.size = 3)
+DimPlot(c12, group.by=c("cluster_2"), cols = c( clust2[5],"lightgrey") ,pt.size = 3)
+DimPlot(c12, group.by=c("extra"), cols = c(first[1], first[2],first[3],"lightgrey") ,pt.size = 3)
 dev.off()
 ```
