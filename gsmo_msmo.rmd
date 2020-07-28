@@ -214,7 +214,6 @@ for (i in 0:21) {
 clust0 <- FindMarkers(merged,ident.1 = i,  logfc.threshold = .10)
 clust0$ratio <- clust0[,3]/(clust0[,4]+.0000001)
 out <- clust0[order(-clust0[,6]), ]
-write.xlsx(out, file = paste0('GM_SEED_cluster_',i,'_markers.xlsx'))
 }
 
 
@@ -344,13 +343,8 @@ gsmo <- subset(merged, idents = "GSMO")
 msmo <- subset(merged, idents = "MSMO")
 
 pdf("figure_2d.pdf")
-DimPlot(gsmo, group.by=c("stromal"), order = c("Meg3","Sox10","C1qb",
-"Aqp4","Col3a1","Pecam1","Rsph1","Mog",'zzz'),
-cols = rev(c(colors.use[14:19],colors.use[21:22],"lightgrey")),pt.size = 1)
-
-DimPlot(msmo, group.by=c("stromal"), order = c("Meg3","Sox10","C1qb",
-"Aqp4","Col3a1","Pecam1","Rsph1","Mog",'zzz'),
-cols = rev(c(colors.use[14:19],colors.use[21:22],"lightgrey")),pt.size = 1)
+DimPlot(gsmo,pt.size = 1)
+DimPlot(msmo,pt.size = 1)
 dev.off()
 
 
@@ -394,7 +388,7 @@ FeaturePlot(merged, features = c( "Olig1","Olig2"), split.by = "tumor.model", or
 dev.off()
 
 
-#make gene list for cluster 7 comparing GSMO cluster 7
+#make gene list for cluster 1,2,7 comparing GSMO
 #to MSMO tumor clusters
 
 Idents(merged) <- "tumor.model"
@@ -402,15 +396,13 @@ gsmo <- subset(x = merged, ident = "GSMO")
 msmo <- subset(x = merged, ident = "MSMO")
 Idents(gsmo) <- "seurat_clusters"
 Idents(msmo) <- "seurat_clusters"
-gsmo1 <- subset(x = gsmo, ident = 7)
-msmo1 <- subset(x = msmo, ident = c(0:6,8:13))
+gsmo1 <- subset(x = gsmo, ident = 1,2,7)
+msmo1 <- subset(x = msmo, ident = c(0,3:6,8:13))
 test<- merge(gsmo1,msmo1)
 Idents(test) <- "tumor.model"
 clust0 <- FindMarkers(test,ident.1 = "GSMO",ident.2="MSMO",  logfc.threshold = .01,min.pct = 0.01)
 clust0$ratio <- clust0[,3]/(clust0[,4]+.0000001)
 out <- clust0[order(-clust0[,6]), ]
-write.xlsx(out, file = paste0('GM_SEED_cluster_7_',i,'_markers.xlsx'))
-
 
 #figure 4 a-f
 
@@ -418,6 +410,8 @@ pdf("figure_4a-f.pdf")
 FeaturePlot(merged, features = c(  "SmoM2-EYFP","Eomes"), split.by = "tumor.model", order=T)
 FeaturePlot(merged, features = c(  "Barhl1", "Ascl1"), split.by = "tumor.model", order=T)
 FeaturePlot(merged, features = c( "Pax3","Pax2"), split.by = "tumor.model", order=T)
+VlnPlot(pbmc, features = c("Eomes"),slot = "data",cols = c("#00AFBB","#E7B800"))
+VlnPlot(pbmc, features = c("Barhl1"),slot = "data",cols = c("#00AFBB","#E7B800"))
 dev.off()
 
 
@@ -442,15 +436,10 @@ merged1 <- FindClusters(merged1, resolution = 1.5)
 #differential expression 
 
 Idents(merged1) <- "seurat_clusters"
-clust0 <- FindMarkers(merged1,ident.1 = 0,  logfc.threshold = .25)
-clust0$ratio <- clust0[,3]/(clust0[,4]+.0000001)
-out <- clust0[order(-clust0[,6]), ]
-write.xlsx(out, file="MG_WT_harmony_seeded.xlsx", sheetName="cluster 0")
-for (i in 1:26) {
+for (i in 0:26) {
 clust0 <- FindMarkers(merged1,ident.1 = i,  logfc.threshold = .25)
 clust0$ratio <- clust0[,3]/(clust0[,4]+.0000001)
 out <- clust0[order(-clust0[,6]), ]
-write.xlsx(out, file="MG_WT_harmony_seeded.xlsx", sheetName=paste0("cluster ",i), append=TRUE)
 }
 
 
@@ -509,12 +498,7 @@ dev.off()
 # figure 5b-g
 
 #set up color vectors
-first <- brewer.pal(n = 8, name = "Set2")
-clust0 <- brewer.pal(n = 8, name = "Reds")
-clust1 <- brewer.pal(n = 8, name = "Blues")
-clust2 <- brewer.pal(n = 8, name = "Greens")
-clust3 <- brewer.pal(n = 8, name = "BuPu")
-clust4 <- brewer.pal(n = 8, name = "Oranges")
+clust <- brewer.pal(n = 8, name = "Set2")
 
 #for each stromal cluster (figures 5-7) normalize data,
 #UMAP coordinates, differential gene lists,
@@ -531,7 +515,6 @@ for (i in 0:1) {
 clust0 <- FindMarkers(c12,ident.1 = i,  logfc.threshold = .10)
 clust0$ratio <- clust0[,3]/(clust0[,4]+.0000001)
 out <- clust0[order(-clust0[,6]), ]
-write.xlsx(out, file = paste0('GM_WT_endo_',i,'_markers.xlsx'))
 }
 
 y <- 2
@@ -623,9 +606,9 @@ ggbarplot(df, x = "cluster", y = "percent",
           add = c("mean_se", "jitter"),
           color = "model", palette = c("#00AFBB", "#E7B800", "red"),
           position = position_dodge(0.8)) + stat_compare_means(aes(group = model), label = "p.signif",hide.ns=T)
-DimPlot(c12, group.by=c("total"), cols = c(first[1], first[2],"lightgrey") ,pt.size = 3)
-DimPlot(c12, group.by=c("cluster_0"), cols = c(clust0[4],clust0[7],"lightgrey") ,pt.size = 3)
-DimPlot(c12, group.by=c("cluster_1"), cols = c(clust1[4], clust1[7], clust1[8],"lightgrey") ,pt.size = 3)
+DimPlot(c12, group.by=c("total"), cols = c(clust[1], clust[2],"lightgrey") ,pt.size = 3)
+DimPlot(c12, group.by=c("cluster_0"), cols = c(clust[1],clust[2],"lightgrey") ,pt.size = 3)
+DimPlot(c12, group.by=c("cluster_1"), cols = c(clust[1], clust[2], clust1[3],"lightgrey") ,pt.size = 3)
 dev.off()
 
 
@@ -641,7 +624,6 @@ for (i in 0:4) {
 clust0 <- FindMarkers(c12,ident.1 = i,  logfc.threshold = .10)
 clust0$ratio <- clust0[,3]/(clust0[,4]+.0000001)
 out <- clust0[order(-clust0[,6]), ]
-write.xlsx(out, file = paste0('GM_WT_immune_cell_',i,'_markers.xlsx'))
 }
 
 y <- 5
@@ -672,18 +654,25 @@ df$cluster <- as.factor(df$cluster)
 
 all <- WhichCells(object = c12, expression = Mrc1 > -1)
 
+Meis1 <- all %in% WhichCells(object = c12, expression = Meis1 > 0)
+Cnn3 <- all %in% WhichCells(object = c12, expression = Cnn3 > 1)
 C1qb <- all %in% WhichCells(object = c12, expression = C1qb > 0)
-total22 <- data.frame(C1qb)
-total22$ident <- 'zzz'
+total5 <- data.frame(Meis1 ,Cnn3,C1qb)
+total5$ident <- 'zzz'
 
 for (i in 1:length(all)) {
-
-        if(total22[i,1]) {
-    total22[i,2] <- "C1qb"
+ if(total5[i,3]) {
+    total5[i,4] <- "C1qb"
         }
+        if(total5[i,1]) {
+    total5[i,4] <- "Meis1"
+        }
+    if(total5[i,2]) {
+    total5[i,4] <- "Cnn3"
+    }
 }
 
-c12[["c1qb"]] <- total22[,2]
+c12[["meyloid"]] <- total5[,4]
 
 Sparc <- all %in% WhichCells(object = c12, expression = Sparc > 0)
 Cx3cr1 <- all %in% WhichCells(object = c12, expression = Cx3cr1 > 1.5)
@@ -773,36 +762,20 @@ for (i in 1:length(all)) {
 c12[["cluster_3"]] <- total5[,3]
 
 
-Cnn3 <- all %in% WhichCells(object = c12, expression = Cnn3 > 0)
-Meis1 <- all %in% WhichCells(object = c12, expression = Meis1 > 0)
-total5 <- data.frame(Cnn3 ,Meis1)
-total5$ident <- 'zzz'
-
-for (i in 1:length(all)) {
-
-        if(total5[i,1]) {
-    total5[i,3] <- "Cnn3"
-        }
-    if(total5[i,2]) {
-    total5[i,3] <- "Meis1"
-    }
-}
-
-c12[["cluster_4"]] <- total5[,3]
 #####
-pdf("figure_6a-h.pdf")
+pdf("figure_6a-k.pdf")
 DimPlot(c12, group.by=c("seurat_clusters"), cols = colors.use ,pt.size = 3)
-DimPlot(c12, group.by=c("c1qb"), cols = c(first[1],"lightgrey") ,pt.size = 3)
+DimPlot(c12, group.by=c("meyloid"), cols = c(clust[1], clust[2], clust1[3],"lightgrey") ,pt.size = 3)
 DimPlot(c12, group.by=c("tumor.model"),pt.size = 3)
 ggbarplot(df[-c(17:20),], x = "cluster", y = "percent", 
           add = c("mean_se", "jitter"),
           color = "model", palette = c("#00AFBB", "#E7B800", "red"),
           position = position_dodge(0.8)) + stat_compare_means(aes(group = model), label = "p.signif", hide.ns = T)
-DimPlot(c12, group.by=c("cluster_0"), cols = c(clust0[4],clust0[7],"lightgrey") ,pt.size = 3)
-DimPlot(c12, group.by=c("cluster_1"), cols = c(clust1[7], clust1[4], clust1[8],"lightgrey") ,pt.size = 3)
-DimPlot(c12, group.by=c("cluster_2"), cols = c(clust2[4], clust2[5], clust2[7],clust2[8],"lightgrey") ,pt.size = 3)
-DimPlot(c12, group.by=c("cluster_3"), cols = c(clust3[8], clust3[5],"lightgrey") ,pt.size = 3)
-DimPlot(c12, group.by=c("cluster_4"), cols = c(clust4[5], clust4[8],"lightgrey") ,pt.size = 3)
+DimPlot(c12, group.by=c("cluster_0"), cols = c(clust[1], clust[2],"lightgrey") ,pt.size = 3)
+DimPlot(c12, group.by=c("cluster_1"), cols = c(clust[1], clust[2], clust1[3],"lightgrey") ,pt.size = 3)
+DimPlot(c12, group.by=c("cluster_2"), cols = c(clust[1], clust[2], clust1[3],clust[4],"lightgrey") ,pt.size = 3)
+DimPlot(c12, group.by=c("cluster_3"), cols = c(clust[1], clust[2],"lightgrey") ,pt.size = 3)
+VlnPlot(merged, features = c("Mif"),slot = "data",cols = c("#00AFBB","#E7B800"))
 dev.off()
 
 
@@ -818,7 +791,6 @@ for (i in 0:2) {
 clust0 <- FindMarkers(c12,ident.1 = i,  logfc.threshold = .10)
 clust0$ratio <- clust0[,3]/(clust0[,4]+.0000001)
 out <- clust0[order(-clust0[,6]), ]
-write.xlsx(out, file = paste0('GM_WT_fibroblast_',i,'_markers.xlsx'))
 }
 
 y <- 3
@@ -922,9 +894,9 @@ ggbarplot(df, x = "cluster", y = "percent",
           add = c("mean_se", "jitter"),
           color = "model", palette = c("#00AFBB", "#E7B800", "red"),
           position = position_dodge(0.8)) + stat_compare_means(aes(group = model), label = "p.signif", hide.ns = T)
-DimPlot(c12, group.by=c("cluster_0"), cols = c(clust0[4],clust0[7],"lightgrey") ,pt.size = 3)
-DimPlot(c12, group.by=c("cluster_1"), cols = c(clust1[4],clust1[7],"lightgrey") ,pt.size = 3)
-DimPlot(c12, group.by=c("cluster_2"), cols = c( clust2[5],"lightgrey") ,pt.size = 3)
-DimPlot(c12, group.by=c("extra"), cols = c(first[1], first[2],first[3],"lightgrey") ,pt.size = 3)
+DimPlot(c12, group.by=c("cluster_0"), cols = c(clust[1],clust[2],"lightgrey") ,pt.size = 3)
+DimPlot(c12, group.by=c("cluster_1"), cols = c(clust[1],clust[2]],"lightgrey") ,pt.size = 3)
+DimPlot(c12, group.by=c("cluster_2"), cols = c( clust[1],"lightgrey") ,pt.size = 3)
+DimPlot(c12, group.by=c("extra"), cols = c(clust[1],clust[2],clust[3],"lightgrey") ,pt.size = 3)
 dev.off()
 ```
