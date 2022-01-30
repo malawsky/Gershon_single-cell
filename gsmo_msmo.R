@@ -1,9 +1,3 @@
-title: "Data Analysis for Malawsky et al."
-author: "Daniel Malawsky"
-date: "04/06/2020"
-version: "R 3.5.0"
-
-```{r}
 
 #load libraries used in the following data analysis, make vector of colors 
 #for cluster visualization and set seed for downsampling
@@ -31,8 +25,8 @@ set.seed(05062020)
 #read in Gsmo and Msmo seurat objects
 #alternatively, if using DGEs, skip this step
 
-GSMO <- readRDS('pathname to GSMO Seurat object')
-MSMO <- readRDS('pathname to MSMO Seurat object')
+GSMO <- readRDS('pathname/to/GSMO/Seurat/object')
+MSMO <- readRDS('pathname/to/MSMO/Seurat/object')
 
 #remove unwanted transcript
 #if using DGEs, read in GSMO DGE to test and
@@ -776,4 +770,3 @@ DimPlot(c12, group.by=c("cluster_1"), cols = c(clust[1],clust[2]],"lightgrey") ,
 DimPlot(c12, group.by=c("cluster_2"), cols = c( clust[1],"lightgrey") ,pt.size = 3)
 DimPlot(c12, group.by=c("extra"), cols = c(clust[1],clust[2],clust[3],"lightgrey") ,pt.size = 3)
 dev.off()
-```
